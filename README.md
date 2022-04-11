@@ -39,6 +39,7 @@ Options:
   -s, --saveOutput    Whether to save the created html output to the same
                       directory as the template, this will override the -o /
                       --outputPath option             [boolean] [default: false]
+  -m, --module        A js file to load helpers from                    [string]
 ```
 
 ## Author

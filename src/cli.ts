@@ -39,4 +39,10 @@ export const getCliArgs = (processArgv: any) =>
         type: "boolean",
         default: false,
       },
+      m: {
+        alias: "module",
+        demandOption: false,
+        describe: "A js file to load helpers from",
+        type: "string",
+      },
     }).argv;

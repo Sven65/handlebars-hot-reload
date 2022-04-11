@@ -17,8 +17,20 @@ const CLIENT_WEBSOCKET_CODE = fs.readFileSync(
   "utf8"
 );
 
-async function prepareTemplate(templatePath: string) {
+async function prepareTemplate(templatePath: string, modulePath?: string) {
   let templateData = {};
+  let module
+  if (modulePath) {
+    modulePath = path.resolve(modulePath)
+    try {
+      if (fs.statSync(modulePath).isFile()) {
+        module = require(modulePath)
+      }
+    } catch (e) {
+      console.log("Error loading module.", e);
+    }
+
+  }
 
   // read the template's data if exists
   // dataPath = dataPath ? dataPath : templatePath.replace(/\.hbs$/, ".json");
@@ -34,7 +46,7 @@ async function prepareTemplate(templatePath: string) {
   let rawHtml; // without the script
   try {
     // rendering Handlebar template
-    rawHtml = await renderTemplate(templateData, templatePath);
+    rawHtml = await renderTemplate(templateData, templatePath, module);
     html = rawHtml;
     // adding the hot reload script
     html += `\n\n<script>${CLIENT_WEBSOCKET_CODE}</script>`;
@@ -62,7 +74,7 @@ function startServer(): Closer {
 
   // rendering and saving the template if outputPath exists
   if (outputPath)
-    prepareTemplate(templatePath).then(({ rawHtml }) =>
+    prepareTemplate(templatePath, modulePath).then(({ rawHtml }) =>
       fs.writeFileSync(outputPath, rawHtml)
     );
 
@@ -80,7 +92,7 @@ function startServer(): Closer {
       res.writeHead(200);
 
       // getting the html with the rendered hbs + hot reload code
-      const { html, rawHtml } = await prepareTemplate(templatePath);
+      const { html, rawHtml } = await prepareTemplate(templatePath, modulePath);
 
       // saving the created output if outputPath exists
       if (outputPath) {
@@ -112,6 +124,7 @@ const {
   j: _dataPath,
   s: saveOutput,
   o: _outputPath,
+  m: modulePath,
 } = getCliArgs(process.argv);
 
 let closeConnection: Closer | undefined;
@@ -125,7 +138,10 @@ function restartServer() {
 }
 
 function main() {
-  const w = createWatcher([templatePath, dataPath]);
+  const watchPaths: string[] = [templatePath, dataPath];
+  if (modulePath) watchPaths.push(modulePath);
+
+  const w = createWatcher(watchPaths);
   closeConnection = startServer();
 
   w.on("change", restartServer);
